@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>피구왕 팥빙수</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: fixed;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #00c9ff 0%, #92fe9d 100%);
+        }
+
+        .game-wrapper {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: min(400px, 95vw);
+            height: min(700px, 95vh);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .game-counter {
+            background: rgba(255,255,255,0.9);
+            color: #2c3e50;
+            padding: 5px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            border: 2px solid #9b59b6;
+        }
+
+        .ui {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 5px;
+            gap: 10px;
+        }
+
+        .score, .time {
+            font-size: 14px;
+            font-weight: bold;
+            background: rgba(255,255,255,0.9);
+            color: #2c3e50;
+            padding: 5px 10px;
+            border-radius: 15px;
+            border: 2px solid #3498db;
+            flex: 1;
+            text-align: center;
+        }
+
+        .game-canvas {
+            background: linear-gradient(180deg, #87ceeb 0%, #98fb98 100%);
+            border: 3px solid #2980b9;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .controls {
+            margin-top: 5px;
+            font-size: 11px;
+            background: rgba(255,255,255,0.8);
+            padding: 5px 10px;
+            border-radius: 10px;
+            color: #2c3e50;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .mobile-controls {
+            position: fixed;
+            bottom: 20px;
+            width: 100vw;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        .touch-btn {
+            width: 60px;
+            height: 60px;
+            background: rgba(52, 152, 219, 0.7);
+            border: 2px solid white;
+            border-radius: 50%;
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: transform 0.1s;
+            pointer-events: auto;
+            opacity: 0.8;
+        }
+
+        /* 전체 화면 터치 영역 - 하단만 */
+        .touch-area {
+            position: fixed;
+            bottom: 0;
+            width: 50vw;
+            height: 40vh;
+            z-index: 500;
+            pointer-events: auto;
+            background: transparent;
+        }
+
+        .touch-area.left {
+            left: 0;
+        }
+
+        .touch-area.right {
+            right: 0;
+        }
+
+        .touch-area.active {
+            background: rgba(52, 152, 219, 0.1);
+        }
+
+        /* 게임 중일 때만 터치 영역 활성화 */
+        .touch-area.game-playing {
+            pointer-events: auto;
+        }
+
+        .touch-area.game-not-playing {
+            pointer-events: none;
+        }
+
+        .touch-btn:active {
+            transform: scale(0.95);
+            background: rgba(41, 128, 185, 1);
+        }
+
+        .overlay-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(52, 152, 219, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 12px;
+            color: white;
+            padding: 20px;
+            z-index: 100;
+        }
+
+        .math-screen {
+            background: rgba(155, 89, 182, 0.95);
+        }
+
+        .overlay-screen h2 {
+            font-size: 28px;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .final-score, .high-score {
+            font-size: 20px;
+            margin-bottom: 10px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .final-score { color: #f1c40f; }
+        .high-score { color: #e74c3c; }
+
+        .game-btn {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 16px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: transform 0.1s;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .game-btn:active {
+            transform: translateY(-2px);
+        }
+
+        .game-btn:hover {
+            background: linear-gradient(45deg, #c0392b, #a93226);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .scoreboard {
+            margin-top: 10px;
+            background: rgba(255,255,255,0.9);
+            padding: 10px;
+            border-radius: 10px;
+            border: 2px solid #3498db;
+            max-height: 150px;
+            overflow-y: auto;
+            width: 100%;
+        }
+
+        .scoreboard h3 {
+            margin-bottom: 8px;
+            color: #e67e22;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        .scoreboard-list {
+            list-style: none;
+        }
+
+        .scoreboard-list li {
+            margin: 3px 0;
+            padding: 4px 8px;
+            background: rgba(52,152,219,0.1);
+            border-radius: 5px;
+            color: #2c3e50;
+            font-weight: bold;
+            font-size: 12px;
+            border-left: 2px solid #3498db;
+        }
+
+        .praise-message {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 15px;
+            font-size: 16px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 2000;
+            animation: praiseAnimation 3s ease-in-out;
+            border: 2px solid #fff;
+            text-align: center;
+            max-width: 80vw;
+        }
+
+        @keyframes praiseAnimation {
+            0% { opacity: 0; transform: translateX(-50%) translateY(-20px) scale(0.5); }
+            20% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.1); }
+            80% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(0.9); }
+        }
+
+        .math-problem {
+            background: rgba(255,255,255,0.9);
+            color: #2c3e50;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .math-input {
+            font-size: 16px;
+            padding: 10px;
+            border: 2px solid #3498db;
+            border-radius: 10px;
+            width: 150px;
+            text-align: center;
+            margin: 10px;
+            font-weight: bold;
+        }
+
+        .math-input:focus {
+            outline: none;
+            border-color: #e74c3c;
+        }
+
+        .math-error {
+            color: #e74c3c;
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        @media (max-height: 600px) {
+            .game-container {
+                height: 100vh;
+            }
+            .mobile-controls {
+                bottom: 10px;
+                padding: 0 15px;
+            }
+            .touch-btn {
+                width: 50px;
+                height: 50px;
+                font-size: 18px;
+            }
+        }
+
+        /* PC에서는 터치 영역 숨김 */
+        @media (min-width: 769px) {
+            .touch-area {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-wrapper">
+        <div class="game-container">
+            <div class="game-counter">
+                게임 횟수: <span id="gameCount">0</span>/3 (3번째마다 수학 문제!)
+            </div>
+            
+            <div class="ui">
+                <div class="score">점수: <span id="scoreDisplay">0</span></div>
+                <div class="time">시간: <span id="timeDisplay">0.0</span>초</div>
+            </div>
+            
+            <canvas id="gameCanvas" class="game-canvas" width="400" height="600"></canvas>
+            
+            <div class="controls">
+                PC: ← → 방향키 | 모바일: 아래 버튼으로 조작
+            </div>
+
+            <div id="startScreen" class="overlay-screen">
+                <h2>🎮 피구왕 팥빙수</h2>
+                <p>방향키로 움직여서 날아오는 피구공을 피하세요!</p>
+                <p style="font-size: 14px; color: #f1c40f; margin-bottom: 20px;">30초마다 특별한 메시지가 나타나요! 🌟</p>
+                <button id="startBtn" class="game-btn">게임 시작</button>
+            </div>
+
+            <div id="gameOverScreen" class="overlay-screen hidden">
+                <h2>💥 게임 종료</h2>
+                <div class="final-score">최종 점수: <span id="finalScore">0</span></div>
+                <div class="high-score">최고 점수: <span id="highScore">0</span></div>
+                <button id="restartBtn" class="game-btn">다시 시작</button>
+            </div>
+
+            <div id="mathScreen" class="overlay-screen math-screen hidden">
+                <h2>🧮 수학 문제 시간!</h2>
+                <p style="font-size: 14px; margin-bottom: 15px;">3게임을 했으니 수학 문제를 풀어보세요!</p>
+                <div class="math-problem" id="mathProblem"></div>
+                <input type="number" id="mathInput" class="math-input" placeholder="답 입력" step="0.01">
+                <br>
+                <button id="mathSubmitBtn" class="game-btn">정답 확인</button>
+                <div id="mathError" class="math-error hidden"></div>
+            </div>
+
+            <div class="scoreboard">
+                <h3>🏆 이준의 최고 기록</h3>
+                <ul id="scoreboardList" class="scoreboard-list"></ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="mobile-controls">
+        <div class="touch-btn" id="leftBtn">←</div>
+        <div class="touch-btn" id="rightBtn">→</div>
+    </div>
+
+    <!-- 전체 화면 터치 영역 -->
+    <div class="touch-area left" id="leftArea"></div>
+    <div class="touch-area right" id="rightArea"></div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let gameState = 'start';
+        let gameTime = 0;
+        let score = 0;
+        let baseObstacleSpeed = 4.0;  // 2.5 → 4.0 (더 빠른 초기 속도)
+        let currentObstacleSpeed = baseObstacleSpeed;
+        let lastPraiseTime = 0;
+        let gameCount = parseInt(localStorage.getItem('patbingsuGameCount') || '0');
+        let currentMathProblem = null;
+        
+        const player = {
+            x: canvas.width / 2 - 12,
+            y: canvas.height - 35,
+            width: 24,
+            height: 24,
+            velocity: 0,
+            baseAcceleration: 0.3,
+            friction: 0.98,
+            maxSpeed: 4.5,
+            keyHoldTime: 0,
+            accelerationMultiplier: 1,
+            bounceOffset: 0,
+            animationFrame: 0,
+            animationSpeed: 0.15,
+            isMoving: false,
+            direction: 0
+        };
+        
+        let obstacles = [];
+        let obstacleSpawnTimer = 0;
+        let baseObstacleSpawnRate = 50;    // 60 → 50 (더욱 자주 생성)
+        let currentObstacleSpawnRate = baseObstacleSpawnRate;
+        let obstacleSpeedMultiplier = 1.0;
+        let extraObstaclesPerSecond = 0;
+        
+        const keys = { left: false, right: false };
+        let highScores = JSON.parse(localStorage.getItem('patbingsuRobloxScores') || '[]');
+        
+        const praiseMessages = [
+            "대단해 이준! 👏", "이준은 천재야! 🧠", "완전 멋져 이준! 😎",
+            "이준 실력 짱! 🔥", "우와 이준 대박! 💫", "이준 너무 잘해! 🎉", "이준은 게임 고수! 🎮"
+        ];
+        
+        const mathProblems = [
+            {eq: "x + 7 = -3", answer: -10}, {eq: "x - 5 = -12", answer: -7}, {eq: "2x = -18", answer: -9},
+            {eq: "3x = -24", answer: -8}, {eq: "x/2 = -6", answer: -12}, {eq: "x/3 = -8", answer: -24},
+            {eq: "2x + 5 = 3x - 8", answer: 13}, {eq: "3x + 7 = 4x - 9", answer: 16}, {eq: "x + 12 = -5", answer: -17},
+            {eq: "x - 13 = -20", answer: -7}, {eq: "-x + 4 = 11", answer: -7}, {eq: "-x - 6 = 9", answer: -15},
+            {eq: "2.5x = -15", answer: -6}, {eq: "3.2x = -16", answer: -5}, {eq: "0.5x + 3 = -2", answer: -10},
+            {eq: "x/2 + 3 = -5", answer: -16}, {eq: "x/3 + 4 = -8", answer: -36}, {eq: "2x + 3 = 11", answer: 4},
+            {eq: "3x + 5 = 17", answer: 4}, {eq: "4x + 2 = 18", answer: 4}, {eq: "5x + 1 = 21", answer: 4},
+            {eq: "x/2 = 2.5", answer: 5}, {eq: "x/3 = 4.5", answer: 13.5}, {eq: "2x - 3 = 5x + 6", answer: -3},
+            {eq: "3x - 4 = 6x + 8", answer: -4}, {eq: "1.5x + 2.5 = 2.5x - 3.5", answer: 6}, {eq: "-2x + 15 = -3x + 20", answer: 5}
+        ];
+        
+        function generateMathProblem() {
+            const randomIndex = Math.floor(Math.random() * mathProblems.length);
+            const selectedProblem = mathProblems[randomIndex];
+            return {
+                problem: selectedProblem.eq + " (x = ?)",
+                answer: selectedProblem.answer
+            };
+        }
+        
+        function updateGameCounter() {
+            document.getElementById('gameCount').textContent = gameCount;
+        }
+        
+        function showMathProblem() {
+            currentMathProblem = generateMathProblem();
+            document.getElementById('mathProblem').textContent = currentMathProblem.problem;
+            document.getElementById('mathInput').value = '';
+            document.getElementById('mathError').classList.add('hidden');
+            document.getElementById('mathScreen').classList.remove('hidden');
+            gameState = 'math';
+        }
+        
+        function checkMathAnswer() {
+            const userAnswer = parseFloat(document.getElementById('mathInput').value);
+            
+            if (isNaN(userAnswer)) {
+                document.getElementById('mathError').textContent = '숫자를 입력해주세요!';
+                document.getElementById('mathError').classList.remove('hidden');
+                return;
+            }
+            
+            const tolerance = 0.01;
+            const isCorrect = Math.abs(userAnswer - currentMathProblem.answer) < tolerance;
+            
+            if (isCorrect) {
+                document.getElementById('mathScreen').classList.add('hidden');
+                gameCount = 0;
+                localStorage.setItem('patbingsuGameCount', '0');
+                updateGameCounter();
+                showPraiseMessage("수학 문제도 척척! 이준 최고! 🎓");
+                gameState = 'start';
+                document.getElementById('startScreen').classList.remove('hidden');
+            } else {
+                document.getElementById('mathError').textContent = `틀렸어요! 정답은 ${currentMathProblem.answer}입니다. 다시 풀어보세요!`;
+                document.getElementById('mathError').classList.remove('hidden');
+                currentMathProblem = generateMathProblem();
+                document.getElementById('mathProblem').textContent = currentMathProblem.problem;
+                document.getElementById('mathInput').value = '';
+            }
+        }
+        
+        function showPraiseMessage(message) {
+            const praiseDiv = document.createElement('div');
+            praiseDiv.className = 'praise-message';
+            praiseDiv.textContent = message;
+            document.body.appendChild(praiseDiv);
+            
+            setTimeout(() => {
+                if (document.body.contains(praiseDiv)) {
+                    document.body.removeChild(praiseDiv);
+                }
+            }, 3000);
+        }
+        
+        function checkPraiseTime() {
+            const currentTime = Math.floor(gameTime);
+            if (currentTime > 0 && currentTime % 30 === 0 && currentTime !== lastPraiseTime) {
+                lastPraiseTime = currentTime;
+                if (currentTime === 30) {
+                    showPraiseMessage("🎉 이준 취고! 🎉");
+                } else {
+                    const messages = ["🎉 이준 취고! 🎉", ...praiseMessages];
+                    const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+                    showPraiseMessage(randomMessage);
+                }
+            }
+        }
+        
+        // 이벤트 리스너
+        document.addEventListener('keydown', (e) => {
+            if (gameState === 'playing') {
+                if (e.code === 'ArrowLeft') { keys.left = true; e.preventDefault(); }
+                if (e.code === 'ArrowRight') { keys.right = true; e.preventDefault(); }
+            } else if (gameState === 'math' && e.code === 'Enter') {
+                checkMathAnswer(); e.preventDefault();
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowLeft') keys.left = false;
+            if (e.code === 'ArrowRight') keys.right = false;
+        });
+
+        // 터치 버튼 이벤트
+        function addTouchEvents(element, direction) {
+            ['touchstart', 'mousedown'].forEach(event => {
+                element.addEventListener(event, (e) => {
+                    e.preventDefault();
+                    if (gameState === 'playing') {
+                        keys[direction] = true;
+                        // 터치 영역 활성화 표시
+                        if (element.classList.contains('touch-area')) {
+                            element.classList.add('active');
+                        }
+                        // 터치 버튼 활성화 표시
+                        const btn = direction === 'left' ? document.getElementById('leftBtn') : document.getElementById('rightBtn');
+                        btn.style.transform = 'scale(1.1)';
+                        btn.style.background = 'rgba(41, 128, 185, 0.9)';
+                    }
+                }, { passive: false });
+            });
+
+            ['touchend', 'touchcancel', 'mouseup', 'mouseleave'].forEach(event => {
+                element.addEventListener(event, (e) => {
+                    e.preventDefault();
+                    keys[direction] = false;
+                    // 터치 영역 비활성화
+                    if (element.classList.contains('touch-area')) {
+                        element.classList.remove('active');
+                    }
+                    // 터치 버튼 비활성화 표시
+                    const btn = direction === 'left' ? document.getElementById('leftBtn') : document.getElementById('rightBtn');
+                    btn.style.transform = 'scale(1)';
+                    btn.style.background = 'rgba(52, 152, 219, 0.7)';
+                }, { passive: false });
+            });
+        }
+
+        // 기존 터치 버튼 이벤트
+        addTouchEvents(document.getElementById('leftBtn'), 'left');
+        addTouchEvents(document.getElementById('rightBtn'), 'right');
+        
+        // 전체 화면 터치 영역 이벤트
+        addTouchEvents(document.getElementById('leftArea'), 'left');
+        addTouchEvents(document.getElementById('rightArea'), 'right');
+        
+        // 게임 상태에 따른 터치 영역 활성화/비활성화
+        function updateTouchAreas() {
+            const leftArea = document.getElementById('leftArea');
+            const rightArea = document.getElementById('rightArea');
+            
+            if (gameState === 'playing') {
+                leftArea.className = 'touch-area left game-playing';
+                rightArea.className = 'touch-area right game-playing';
+            } else {
+                leftArea.className = 'touch-area left game-not-playing';
+                rightArea.className = 'touch-area right game-not-playing';
+            }
+        }
+        
+        // 게임 버튼 이벤트 (모바일 터치 지원)
+        function addButtonEvents(btn, callback) {
+            btn.addEventListener('click', callback);
+            btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                callback();
+            }, { passive: false });
+        }
+        
+        addButtonEvents(document.getElementById('startBtn'), startGame);
+        addButtonEvents(document.getElementById('restartBtn'), checkGameCount);
+        addButtonEvents(document.getElementById('mathSubmitBtn'), checkMathAnswer);
+        
+        function checkGameCount() {
+            gameCount++;
+            localStorage.setItem('patbingsuGameCount', gameCount.toString());
+            updateGameCounter();
+            
+            if (gameCount >= 3) {
+                showMathProblem();
+            } else {
+                startGame();
+            }
+        }
+        
+        function startGame() {
+            if (gameCount >= 3) {
+                showMathProblem();
+                return;
+            }
+            
+            gameState = 'playing';
+            gameTime = 0;
+            score = 0;
+            obstacles = [];
+            obstacleSpawnTimer = 0;
+            currentObstacleSpeed = baseObstacleSpeed;
+            currentObstacleSpawnRate = baseObstacleSpawnRate;
+            obstacleSpeedMultiplier = 1.0;
+            extraObstaclesPerSecond = 0;
+            lastPraiseTime = 0;
+            
+            player.x = canvas.width / 2 - 12;
+            player.velocity = 0;
+            player.keyHoldTime = 0;
+            player.accelerationMultiplier = 1;
+            player.bounceOffset = 0;
+            player.animationFrame = 0;
+            player.isMoving = false;
+            player.direction = 0;
+            
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            
+            // 터치 영역 활성화
+            updateTouchAreas();
+            
+            if (gameCount === 1) {
+                setTimeout(() => {
+                    showPraiseMessage("이준아 화이팅! 30초만 버텨봐! 💪");
+                }, 1000);
+            }
+            
+            gameLoop();
+        }
+        
+        function updatePlayer() {
+            let isInputMoving = false;
+            let targetDirection = 0;
+            
+            if (keys.left && !keys.right) {
+                targetDirection = -1;
+                isInputMoving = true;
+                player.keyHoldTime += 1/60;
+                player.direction = -1;
+            } else if (keys.right && !keys.left) {
+                targetDirection = 1;
+                isInputMoving = true;
+                player.keyHoldTime += 1/60;
+                player.direction = 1;
+            } else {
+                player.keyHoldTime = 0;
+                if (Math.abs(player.velocity) < 0.1) {
+                    player.direction = 0;
+                }
+            }
+            
+            player.isMoving = Math.abs(player.velocity) > 0.1;
+            
+            if (isInputMoving) {
+                player.accelerationMultiplier = Math.pow(1.15, player.keyHoldTime * 2);
+                if (player.accelerationMultiplier > 2.0) {
+                    player.accelerationMultiplier = 2.0;
+                }
+                
+                const currentAcceleration = player.baseAcceleration * player.accelerationMultiplier;
+                const targetVelocity = targetDirection * player.maxSpeed;
+                const velocityDiff = targetVelocity - player.velocity;
+                player.velocity += velocityDiff * currentAcceleration;
+            } else {
+                player.accelerationMultiplier = 1;
+                player.velocity *= player.friction;
+            }
+            
+            if (player.isMoving) {
+                player.animationFrame += player.animationSpeed * (Math.abs(player.velocity) / player.maxSpeed + 0.3);
+                if (player.animationFrame >= 4) {
+                    player.animationFrame = 0;
+                }
+            } else {
+                player.animationFrame = 0;
+            }
+            
+            if (player.isMoving) {
+                player.bounceOffset = Math.sin(gameTime * 12 + player.animationFrame) * 1.5;
+            } else {
+                player.bounceOffset = Math.sin(gameTime * 4) * 0.5;
+            }
+            
+            if (Math.abs(player.velocity) < 0.01) {
+                player.velocity = 0;
+            }
+            
+            player.x += player.velocity;
+            
+            if (player.x < 0) {
+                player.x = 0;
+                player.velocity = Math.max(0, player.velocity * 0.6);
+                player.keyHoldTime = 0;
+            }
+            if (player.x > canvas.width - player.width) {
+                player.x = canvas.width - player.width;
+                player.velocity = Math.min(0, player.velocity * 0.6);
+                player.keyHoldTime = 0;
+            }
+        }
+        
+        function spawnObstacle() {
+            if (obstacleSpawnTimer <= 0) {
+                obstacles.push({
+                    x: Math.random() * (canvas.width - 25),
+                    y: -30,
+                    width: 25,
+                    height: 25,
+                    speed: currentObstacleSpeed * obstacleSpeedMultiplier,
+                    rotation: Math.random() * Math.PI * 2
+                });
+                obstacleSpawnTimer = currentObstacleSpawnRate;
+            } else {
+                obstacleSpawnTimer--;
+            }
+            
+            // 시간에 따른 공 개수 대폭 증가 시스템
+            const timeInSeconds = gameTime;
+            let extraSpawnChance = 0;
+            
+            // 10초마다 단계별 증가
+            if (timeInSeconds >= 10) extraSpawnChance += 0.8;   // 초당 0.8개 추가
+            if (timeInSeconds >= 20) extraSpawnChance += 1.0;   // 초당 1.8개 총합
+            if (timeInSeconds >= 30) extraSpawnChance += 1.2;   // 초당 3.0개 총합  
+            if (timeInSeconds >= 40) extraSpawnChance += 1.5;   // 초당 4.5개 총합
+            if (timeInSeconds >= 50) extraSpawnChance += 1.8;   // 초당 6.3개 총합
+            if (timeInSeconds >= 60) extraSpawnChance += 2.0;   // 초당 8.3개 총합
+            
+            // 추가 공 생성 (매 프레임마다 확률적으로)
+            const frameSpawnChance = extraSpawnChance / 60; // 60fps 기준
+            if (Math.random() < frameSpawnChance) {
+                obstacles.push({
+                    x: Math.random() * (canvas.width - 25),
+                    y: -30,
+                    width: 25,
+                    height: 25,
+                    speed: currentObstacleSpeed * obstacleSpeedMultiplier,
+                    rotation: Math.random() * Math.PI * 2
+                });
+            }
+            
+            // 더욱 극한 상황을 위한 보너스 (70초 이후)
+            if (timeInSeconds >= 70) {
+                const bonusChance = (timeInSeconds - 70) * 0.1 / 60; // 1초마다 초당 0.1개씩 계속 증가
+                if (Math.random() < bonusChance) {
+                    obstacles.push({
+                        x: Math.random() * (canvas.width - 25),
+                        y: -30,
+                        width: 25,
+                        height: 25,
+                        speed: currentObstacleSpeed * obstacleSpeedMultiplier,
+                        rotation: Math.random() * Math.PI * 2
+                    });
+                }
+            }
+        }
+        
+        function updateObstacles() {
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obstacle = obstacles[i];
+                obstacle.y += obstacle.speed;
+                obstacle.rotation += 0.05;
+                
+                if (obstacle.y > canvas.height) {
+                    obstacles.splice(i, 1);
+                }
+            }
+        }
+        
+        function checkCollision() {
+            for (let obstacle of obstacles) {
+                const obstacleCenter = {
+                    x: obstacle.x + obstacle.width / 2,
+                    y: obstacle.y + obstacle.height / 2
+                };
+                const playerCenter = {
+                    x: player.x + player.width / 2,
+                    y: player.y + player.height / 2 + player.bounceOffset * 0.5
+                };
+                
+                const distance = Math.sqrt(
+                    Math.pow(obstacleCenter.x - playerCenter.x, 2) +
+                    Math.pow(obstacleCenter.y - playerCenter.y, 2)
+                );
+                
+                if (distance < (obstacle.width / 2 + player.width / 3)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        function updateGame() {
+            if (gameState !== 'playing') return;
+            
+            gameTime += 1/60;
+            score = Math.floor(gameTime * 10);
+            
+            // 10초마다 피구공 속도 대폭 증가
+            const speedIncreaseIntervals = Math.floor(gameTime / 10);
+            obstacleSpeedMultiplier = Math.pow(1.25, speedIncreaseIntervals); // 1.3 → 1.25 (약간 조정)
+            
+            checkPraiseTime();
+            
+            // 기본 속도 증가율도 높임
+            currentObstacleSpeed = baseObstacleSpeed + (gameTime * 0.015); // 0.008 → 0.015 (더 빠른 증가)
+            
+            updatePlayer();
+            spawnObstacle();
+            updateObstacles();
+            
+            if (checkCollision()) {
+                gameOver();
+            }
+            
+            document.getElementById('scoreDisplay').textContent = score;
+            document.getElementById('timeDisplay').textContent = gameTime.toFixed(1);
+        }
+        
+        function drawRobloxPlayer() {
+            ctx.save();
+            
+            const bounceY = player.y + player.bounceOffset * 0.5;
+            ctx.translate(player.x + player.width/2, bounceY + player.height/2);
+            
+            if (player.direction === -1) {
+                ctx.scale(-1, 1);
+            }
+            
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.fillRect(-player.width/2 + 0.5, -player.height/2 + 0.5, player.width, player.height);
+            
+            ctx.translate(-player.width/2, -player.height/2);
+            
+            const frame = Math.floor(player.animationFrame);
+            let leftLegOffset = 0, rightLegOffset = 0, legHeight = 6;
+            
+            if (player.isMoving) {
+                switch(frame) {
+                    case 0: leftLegOffset = 0; rightLegOffset = 0; legHeight = 6; break;
+                    case 1: leftLegOffset = 1; rightLegOffset = -0.5; legHeight = 7; break;
+                    case 2: leftLegOffset = 0.5; rightLegOffset = -0.5; legHeight = 5; break;
+                    case 3: leftLegOffset = -0.5; rightLegOffset = 1; legHeight = 7; break;
+                }
+            }
+            
+            // 다리 (갈색)
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(4 + leftLegOffset, 18, 4, legHeight);
+            ctx.fillRect(16 + rightLegOffset, 18, 4, legHeight);
+            
+            // 몸통 (흰색)
+            ctx.fillStyle = '#FFFFFF';
+            const bodyTilt = player.isMoving ? player.velocity * 0.5 : 0;
+            ctx.save();
+            ctx.translate(12, 14);
+            ctx.rotate(bodyTilt * 0.02);
+            ctx.fillRect(-10, -6, 20, 12);
+            ctx.strokeStyle = '#CCCCCC';
+            ctx.lineWidth = 0.5;
+            ctx.strokeRect(-10, -6, 20, 12);
+            ctx.restore();
+            
+            // 팔 (갈색)
+            ctx.fillStyle = '#8B4513';
+            const armSwing = player.isMoving ? Math.sin(player.animationFrame * 1.5) * 1.5 : 0;
+            ctx.fillRect(-1, 10 + armSwing, 4, 8);
+            ctx.fillRect(21, 10 - armSwing, 4, 8);
+            
+            // 머리 (노란색)
+            const headBob = player.isMoving ? Math.sin(player.animationFrame * 2) * 0.5 : 0;
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(4, 0 + headBob, 16, 12);
+            ctx.strokeStyle = '#FFA500';
+            ctx.lineWidth = 0.5;
+            ctx.strokeRect(4, 0 + headBob, 16, 12);
+            
+            // 얼굴
+            ctx.fillStyle = '#000000';
+            const eyeHeight = player.isMoving && Math.abs(player.velocity) > 2 ? 1.5 : 2;
+            ctx.fillRect(7, 3 + headBob, 2, eyeHeight);
+            ctx.fillRect(15, 3 + headBob, 2, eyeHeight);
+            
+            ctx.beginPath();
+            const smileSize = player.isMoving ? 2.5 : 2;
+            ctx.arc(12, 7 + headBob, smileSize, 0, Math.PI);
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            
+            // 파티 모자
+            ctx.fillStyle = '#9932CC';
+            ctx.beginPath();
+            ctx.moveTo(12, -6 + headBob);
+            ctx.lineTo(6, 2 + headBob);
+            ctx.lineTo(18, 2 + headBob);
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(8, 0 + headBob, 8, 1);
+            ctx.fillRect(9, 1 + headBob, 6, 1);
+            
+            // 미끄러짐 효과
+            if (Math.abs(player.velocity) > 2.8) {
+                ctx.globalAlpha = 0.4;
+                ctx.translate(-player.velocity * 0.6, 2);
+                
+                ctx.fillStyle = '#FFD700';
+                ctx.fillRect(4, 0 + headBob, 16, 12);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(2, 8, 20, 12);
+                
+                ctx.globalAlpha = 1;
+            }
+            
+            ctx.restore();
+        }
+        
+        function drawDodgeball(obstacle) {
+            ctx.save();
+            ctx.translate(obstacle.x + obstacle.width/2, obstacle.y + obstacle.height/2);
+            ctx.rotate(obstacle.rotation);
+            
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.beginPath();
+            ctx.arc(2, 2, obstacle.width/2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            const gradient = ctx.createRadialGradient(-5, -5, 5, 0, 0, obstacle.width/2);
+            gradient.addColorStop(0, '#FF6B6B');
+            gradient.addColorStop(0.7, '#E74C3C');
+            gradient.addColorStop(1, '#C0392B');
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(0, 0, obstacle.width/2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.strokeStyle = '#8B0000';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(0, 0, obstacle.width/2, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(0, 0, obstacle.width/3, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(0, -obstacle.width/2);
+            ctx.lineTo(0, obstacle.width/2);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(-obstacle.width/2, 0);
+            ctx.lineTo(obstacle.width/2, 0);
+            ctx.stroke();
+            
+            ctx.restore();
+        }
+        
+        function drawBackground() {
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(1, '#98FB98');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            for (let i = 0; i < 5; i++) {
+                const x = (i * 80 + gameTime * 10) % (canvas.width + 60) - 30;
+                const y = 50 + Math.sin(gameTime * 0.01 + i) * 20;
+                
+                ctx.beginPath();
+                ctx.arc(x, y, 20, 0, Math.PI * 2);
+                ctx.arc(x + 15, y, 15, 0, Math.PI * 2);
+                ctx.arc(x + 30, y, 20, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawBackground();
+            
+            for (let obstacle of obstacles) {
+                drawDodgeball(obstacle);
+            }
+            
+            drawRobloxPlayer();
+        }
+        
+        function gameOver() {
+            gameState = 'gameOver';
+            
+            // 터치 영역 비활성화
+            updateTouchAreas();
+            
+            if (gameTime >= 30) {
+                showPraiseMessage("30초 이상! 이준 취고! 🏆");
+            }
+            
+            updateHighScores(score);
+            
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('highScore').textContent = Math.max(...highScores, 0);
+            document.getElementById('gameOverScreen').classList.remove('hidden');
+        }
+        
+        function updateHighScores(newScore) {
+            highScores.push(newScore);
+            highScores.sort((a, b) => b - a);
+            highScores = highScores.slice(0, 5);
+            
+            localStorage.setItem('patbingsuRobloxScores', JSON.stringify(highScores));
+            updateScoreboardDisplay();
+        }
+        
+        function updateScoreboardDisplay() {
+            const scoreboardList = document.getElementById('scoreboardList');
+            scoreboardList.innerHTML = '';
+            
+            if (highScores.length === 0) {
+                const li = document.createElement('li');
+                li.textContent = '아직 기록이 없습니다';
+                li.style.opacity = '0.6';
+                scoreboardList.appendChild(li);
+                return;
+            }
+            
+            highScores.forEach((score, index) => {
+                const li = document.createElement('li');
+                li.textContent = `${index + 1}. ${score}점`;
+                if (index === 0) {
+                    li.style.color = '#e67e22';
+                    li.style.fontWeight = 'bold';
+                    li.style.borderLeftColor = '#e67e22';
+                }
+                scoreboardList.appendChild(li);
+            });
+        }
+        
+        function gameLoop() {
+            updateGame();
+            render();
+            
+            if (gameState === 'playing') {
+                requestAnimationFrame(gameLoop);
+            }
+        }
+        
+        // 캔버스 크기 조정
+        function resizeCanvas() {
+            const container = document.querySelector('.game-container');
+            const canvas = document.getElementById('gameCanvas');
+            const containerRect = container.getBoundingClientRect();
+            
+            const maxWidth = Math.min(400, containerRect.width - 20);
+            const maxHeight = Math.min(600, containerRect.height - 200);
+            
+            const ratio = Math.min(maxWidth / 400, maxHeight / 600);
+            canvas.style.width = (400 * ratio) + 'px';
+            canvas.style.height = (600 * ratio) + 'px';
+        }
+
+        // 초기화
+        window.addEventListener('load', () => {
+            resizeCanvas();
+            updateTouchAreas(); // 초기 터치 영역 상태 설정
+        });
+        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 100));
+        
+        updateGameCounter();
+        updateScoreboardDisplay();
+    </script>
+</body>
+</html>
